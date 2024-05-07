@@ -19,8 +19,8 @@ export default function TabBottomMenu({ selectedTabName, onPress, todoList }) {
       <TouchableOpacity onPress={() => onPress("all")}>
         <Text style={getTextStyle("all")}>All ({countByStatus.all})</Text>
       </TouchableOpacity>
-      <TouchableOpacity onPress={() => onPress("in-progress")}>
-        <Text style={getTextStyle("in-progress")}>
+      <TouchableOpacity onPress={() => onPress("inProgress")}>
+        <Text style={getTextStyle("inProgress")}>
           In progress ({countByStatus.inProgress})
         </Text>
       </TouchableOpacity>

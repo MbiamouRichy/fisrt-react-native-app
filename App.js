@@ -1,4 +1,5 @@
-import { useState } from "react";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useEffect, useState } from "react";
 import { Alert, ScrollView, View } from "react-native";
 import Dialog from "react-native-dialog";
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
@@ -9,11 +10,49 @@ import Header from "./components/Header/Header";
 import TabBottomMenu from "./components/TabBottomMenu";
 import ButtonAdd from "./components/buttonAdd/ButtonAdd";
 
+let isFirstRender = true;
+let isLoadUpdate = false;
 export default function App() {
   const [selectedTabName, setSelectedTabName] = useState("all");
   let [todoList, setTodoList] = useState([]);
   let [isAddDialogVisible, setIsAddDialogVisible] = useState(false);
   let [inputValue, setInputValue] = useState("");
+
+  useEffect(() => {
+    LoadTodoList();
+  }, []);
+
+  useEffect(() => {
+    if (isLoadUpdate) {
+      isLoadUpdate = false;
+    } else {
+      if (isFirstRender) {
+        saveTodoList();
+      } else {
+        isFirstRender = false;
+      }
+    }
+  }, [todoList]);
+
+  async function saveTodoList() {
+    try {
+      await AsyncStorage.setItem("@todolist", JSON.stringify(todoList));
+    } catch (err) {
+      alert("Erreur " + err);
+    }
+  }
+  async function LoadTodoList() {
+    try {
+      const stringifiedTodoList = await AsyncStorage.getItem("@todolist");
+      if (stringifiedTodoList !== null) {
+        const parsedTodoList = JSON.parse(stringifiedTodoList);
+        isLoadUpdate = true;
+        setTodoList(parsedTodoList);
+      }
+    } catch (err) {
+      alert("Erreur " + err);
+    }
+  }
   function deleteTodo(todoToDelete) {
     Alert.alert("suppression", "Supprimer cette tache ?", [
       {
@@ -29,17 +68,18 @@ export default function App() {
       },
     ]);
   }
-
-  function getFilteredList() {
+  const getFilteredList = () => {
     switch (selectedTabName) {
       case "all":
         return todoList;
-      case "in-progress":
+      case "inProgress":
         return todoList.filter((todo) => !todo.isCompleted);
       case "done":
         return todoList.filter((todo) => todo.isCompleted);
+      default:
+        return [];
     }
-  }
+  };
 
   function updateTodo(todo) {
     const updatedTodo = {
@@ -55,19 +95,6 @@ export default function App() {
     updatedTodoList[indexToUpdate] = updatedTodo;
     setTodoList(updatedTodoList);
   }
-
-  function renderTodoList() {
-    return getFilteredList().map((todo) => (
-      <View style={s.cardItem} key={todo.id}>
-        <CardToDo
-          onLongPress={deleteTodo}
-          onPress={updateTodo}
-          todo={todo}
-        ></CardToDo>
-      </View>
-    ));
-  }
-
   function showAddDialog() {
     setIsAddDialogVisible(true);
   }
@@ -90,14 +117,24 @@ export default function App() {
             <Header></Header>
           </View>
           <View style={s.body}>
-            <ScrollView>{renderTodoList()}</ScrollView>
+            <ScrollView>
+              {getFilteredList().map((todo) => (
+                <View style={s.cardItem} key={todo.id}>
+                  <CardToDo
+                    onLongPress={deleteTodo}
+                    onPress={updateTodo}
+                    todo={todo}
+                  ></CardToDo>
+                </View>
+              ))}
+            </ScrollView>
           </View>
           <ButtonAdd onPress={showAddDialog} />
         </SafeAreaView>
       </SafeAreaProvider>
       <View style={s.footer}>
         <TabBottomMenu
-          todoList={todoList}
+          todoList={[...todoList]}
           onPress={setSelectedTabName}
           selectedTabName={selectedTabName}
         />
